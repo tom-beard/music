@@ -3,9 +3,6 @@
 library(tidyverse)
 library(fs)
 library(here)
-library(glue)
-library(skimr)
-library(janitor)
 library(officer)
 
 read_chord_tables_from_docx <- function(docx_path) {

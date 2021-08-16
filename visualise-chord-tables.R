@@ -15,9 +15,13 @@ chord_tables <- read_csv(here("chord_tables.csv"), col_types = cols(
   osc_4 = col_double()
 ))
 
+this_table_name <- "Stradella Chords" # needs range of -2 to 23
+this_table_name <- "3-note Chords"
+this_table_name <- "4-note Chords"
+
 chord_list <- chord_tables %>% 
-  filter(table_name == "4-note Chords") %>% 
-  pivot_longer(starts_with("osc_"), names_to = "osc", values_to = "semitones") %>% 
+  filter(table_name == this_table_name) %>% 
+  pivot_longer(starts_with("osc_"), names_to = "osc", values_to = "semitones", values_drop_na = TRUE) %>% 
   select(row, semitones) %>% 
   mutate(semitones = semitones + 1) %>% 
   group_by(row) %>% 

@@ -15,11 +15,28 @@ chord_tables <- read_csv(here("chord_tables.csv"), col_types = cols(
   osc_4 = col_double()
 ))
 
-make_chord_list_from_table <- function(chord_tables, selected_table_name) {
+make_tidy_chords_from_table <- function(chord_tables, selected_table_name) {
   chord_tables %>% 
     filter(table_name == selected_table_name) %>% 
     pivot_longer(starts_with("osc_"), names_to = "osc", values_to = "semitones", values_drop_na = TRUE) %>% 
-    select(row, semitones) %>% 
+    select(row, osc, semitones)
+}
+
+make_tidy_chords_from_table(chord_tables, "4-note Chords") %>% 
+  ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
+  geom_hline(yintercept = c(0, 4, 7, 12), colour = "grey80", size = 1) +
+  geom_step() +
+  geom_point() +
+  scale_x_reverse() +
+  scale_y_continuous(breaks = 0:14) +
+  labs(x = "", y = "", title = "") +
+  coord_flip() +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+make_chord_list_from_table <- function(chord_tables, selected_table_name) {
+  chord_tables %>% 
+    make_tidy_chords_from_table(selected_table_name) %>% 
     mutate(semitones = semitones + 1) %>% 
     group_by(row) %>% 
     summarise(notes = list(c(semitones))) %>% 

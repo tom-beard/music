@@ -109,3 +109,47 @@ make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>%
   coord_flip() +
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
+
+
+# find labels for common chords -------------------------------------------
+
+chord_tables
+
+chord_base <- construct_chord_major("C")
+chord_base %>% get_keys_inversion(1)
+construct_chord_raw("C", c(3, 3), chord_type = "dim") %>% get_keys_inversion(0)
+
+inversion <- 1
+input_chord <- chord_base
+
+get_normalised_inversion <- function(inversion, input_chord) {
+  inverted_chord <- get_keys_inversion(input_chord, inversion)
+  inverted_chord - inverted_chord[1]
+}
+
+chord_labels <- tribble(
+  ~label, ~chord,
+  "maj", construct_chord_major("C"),
+  "min", construct_chord_minor("C"),
+  "dim", construct_chord_raw("C", c(3, 3)),
+  "aug", construct_chord_raw("C", c(4, 4)),
+  "sus2", construct_chord_raw("C", c(2, 5)),
+  "sus4", construct_chord_raw("C", c(5, 2))
+) %>% 
+  expand(nesting(label, chord), inversion = c(0, 1, 2)) %>% 
+  mutate(semitones = map2(inversion, chord, get_normalised_inversion)) %>% 
+  arrange(semitones, inversion) %>% 
+  mutate(full_label = ifelse(inversion == 0, label, paste(label, "inv", inversion))) %>% 
+  unnest(semitones) %>% 
+  group_by(full_label) %>% 
+  mutate(osc = paste0("osc_", row_number())) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = osc, values_from = semitones) %>% 
+  group_by(osc_1, osc_2, osc_3) %>% 
+  arrange(osc_1, osc_2, osc_3, inversion) %>% 
+  slice(1) %>% 
+  select(full_label, starts_with("osc_")) %>% 
+  ungroup()
+
+
+         

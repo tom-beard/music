@@ -113,15 +113,6 @@ make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>%
 
 # find labels for common chords -------------------------------------------
 
-chord_tables
-
-chord_base <- construct_chord_major("C")
-chord_base %>% get_keys_inversion(1)
-construct_chord_raw("C", c(3, 3), chord_type = "dim") %>% get_keys_inversion(0)
-
-inversion <- 1
-input_chord <- chord_base
-
 get_normalised_inversion <- function(inversion, input_chord) {
   inverted_chord <- get_keys_inversion(input_chord, inversion)
   inverted_chord - inverted_chord[1]
@@ -151,5 +142,23 @@ chord_labels <- tribble(
   select(full_label, starts_with("osc_")) %>% 
   ungroup()
 
+chord_row_labels <- chord_tables %>% 
+  filter(table_name == "3-note Chords") %>% 
+  left_join(chord_labels, by = c("osc_1", "osc_2", "osc_3")) %>% 
+  mutate(row_label = ifelse(is.na(full_label), as.character(row), glue("{row} ({full_label})"))) %>% 
+  select(row, row_label) %>% 
+  mutate(row_label = factor(row_label, ordered = TRUE, levels = unique(row_label)))
 
-         
+chord_list <- make_chord_list_from_table(chord_tables, "3-note Chords")
+
+keys_chords %>% 
+  highlight_key_sequence(key_sequence = chord_list,
+                         new_color = "lightblue", keep_color = "lightblue", remove_color = NULL) %>% 
+  left_join(chord_row_labels, by = c("seq_no" = "row")) %>%
+  ggpiano() + 
+  coord_fixed(ratio = 0.5) +
+  facet_wrap(vars(row_label), ncol = 8) +
+  theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
+
+ggsave("chord-chart-3-notes.pdf", width = 17, height = 10, units = "in")
+

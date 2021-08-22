@@ -19,7 +19,8 @@ make_tidy_chords_from_table <- function(chord_tables, selected_table_name) {
   chord_tables %>% 
     filter(table_name == selected_table_name) %>% 
     pivot_longer(starts_with("osc_"), names_to = "osc", values_to = "semitones", values_drop_na = TRUE) %>% 
-    select(row, osc, semitones)
+    select(row, osc, semitones) %>% 
+    mutate(osc = str_remove(osc, "^osc_"))
 }
 
 make_tidy_chords_from_table(chord_tables, "4-note Chords") %>% 
@@ -88,3 +89,23 @@ extend_keyboard(lower_keys_required) %>%
   ggpiano() + 
   coord_fixed(ratio = 0.5) +
   facet_wrap(vars(seq_name), ncol = 8)
+
+
+# examine harmonic chords -------------------------------------------------
+
+bind_rows(
+  make_tidy_chords_from_table(chord_tables, "4-note Chords") %>% add_column(table_type = "ET"),
+  make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>% add_column(table_type = "Harmonic")
+) %>% 
+  pivot_wider(names_from = table_type, values_from = semitones)
+  
+make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>% 
+  ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
+  geom_step() +
+  geom_point() +
+  scale_x_reverse() +
+  scale_y_continuous(breaks = 12 * (0:5)) +
+  labs(x = "", y = "", title = "") +
+  coord_flip() +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())

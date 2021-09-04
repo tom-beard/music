@@ -162,3 +162,20 @@ keys_chords %>%
 
 ggsave("chord-chart-3-notes.pdf", width = 17, height = 10, units = "in")
 
+
+# look for 9ths -----------------------------------------------------------
+
+chord_list_9ths <- chord_tables %>% 
+  filter(osc_2 == 12 + 2 | osc_3 == 12 + 2) %>% 
+  make_chord_list_from_table("3-note Chords")
+
+keys_chords %>% 
+  highlight_key_sequence(key_sequence = chord_list_9ths,
+                         new_color = "lightblue", keep_color = "lightblue", remove_color = NULL) %>% 
+  # left_join(chord_row_labels, by = c("seq_no" = "row")) %>%
+  ggpiano() + 
+  coord_fixed(ratio = 0.5) +
+  facet_wrap(vars(seq_no)) +
+  # facet_wrap(vars(row_label), ncol = 8) +
+  theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
+

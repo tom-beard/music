@@ -5,6 +5,8 @@ library(fs)
 library(here)
 library(glue)
 library(pichor)
+library(ggforce)
+library(gridExtra)
 
 chord_tables <- read_csv(here("chord_tables.csv"), col_types = cols(
   table_name = col_character(),
@@ -142,14 +144,16 @@ chord_labels <- tribble(
   select(full_label, starts_with("osc_")) %>% 
   ungroup()
 
+chord_table_name <- "3-note Chords"
+
 chord_row_labels <- chord_tables %>% 
-  filter(table_name == "3-note Chords") %>% 
+  filter(table_name == chord_table_name) %>% 
   left_join(chord_labels, by = c("osc_1", "osc_2", "osc_3")) %>% 
   mutate(row_label = ifelse(is.na(full_label), as.character(row), glue("{row} ({full_label})"))) %>% 
   select(row, row_label) %>% 
   mutate(row_label = factor(row_label, ordered = TRUE, levels = unique(row_label)))
 
-chord_list <- make_chord_list_from_table(chord_tables, "3-note Chords")
+chord_list <- make_chord_list_from_table(chord_tables, chord_table_name)
 
 keys_chords %>% 
   highlight_key_sequence(key_sequence = chord_list,
@@ -161,6 +165,33 @@ keys_chords %>%
   theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
 
 ggsave("chord-chart-3-notes.pdf", width = 17, height = 10, units = "in")
+
+
+# compact multi-page version for mobile ----------------------------------------------
+
+rows_per_page <- 4
+cols_per_page <- 2
+num_pages <- length(chord_list) / (rows_per_page * cols_per_page)
+
+plot_chord_page <- function(this_page) {
+  keys_chords %>% 
+    highlight_key_sequence(key_sequence = chord_list,
+                           new_color = "lightblue", keep_color = "lightblue", remove_color = NULL) %>% 
+    left_join(chord_row_labels, by = c("seq_no" = "row")) %>%
+    ggpiano() + 
+    coord_fixed(ratio = 0.5) +
+    facet_wrap_paginate(vars(row_label), nrow = rows_per_page, ncol = cols_per_page,
+                        page = this_page) +
+    theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
+}
+
+all_chord_pages <- 1:num_pages %>% 
+  map(plot_chord_page) %>% 
+  marrangeGrob(nrow = 1, ncol = 1,
+               top = quote(paste0("E352 ", chord_table_name, ": page ", g, " of ", npages)))
+
+ggsave("chord-chart-3-notes-multipage.pdf", all_chord_pages,
+       width = 7, height = 9, units = "in")
 
 
 # look for 9ths -----------------------------------------------------------

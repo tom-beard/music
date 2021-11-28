@@ -120,7 +120,9 @@ get_normalised_inversion <- function(inversion, input_chord) {
   inverted_chord - inverted_chord[1]
 }
 
-chord_labels <- tribble(
+chord_defns <- list()
+
+chord_defns$`3-note Chords` <- tribble(
   ~label, ~chord,
   "maj", construct_chord_major("C"),
   "min", construct_chord_minor("C"),
@@ -128,7 +130,28 @@ chord_labels <- tribble(
   "aug", construct_chord_raw("C", c(4, 4)),
   "sus2", construct_chord_raw("C", c(2, 5)),
   "sus4", construct_chord_raw("C", c(5, 2))
-) %>% 
+)
+
+chord_defns$`4-note Chords` <- tribble(
+  ~label, ~chord,
+  "maj7", construct_chord_major_7("C"),
+  "dom7", construct_chord_dominant_7("C"),
+  "min7", construct_chord_raw("C", c(3, 4, 3)),
+  "minmaj7", construct_chord_raw("C", c(3, 4, 4)),
+  "halfdim7", construct_chord_raw("C", c(3, 3, 4)),
+  "dim7", construct_chord_raw("C", c(3, 3, 3)),
+  "aug7", construct_chord_raw("C", c(4, 4, 2)),
+  "dom7flat5", construct_chord_raw("C", c(4, 2, 4)),
+  "maj7flat5", construct_chord_raw("C", c(4, 2, 5)),
+  "augmaj7", construct_chord_raw("C", c(4, 4, 3)),
+  "dimmaj7", construct_chord_raw("C", c(3, 3, 5)),
+  "dom7sus4", construct_chord_raw("C", c(5, 2, 3)),
+  "dom7sus2", construct_chord_raw("C", c(2, 5, 3))
+)
+
+chord_table_name <- "3-note Chords"
+
+chord_labels <- chord_defns[[chord_table_name]] %>% 
   expand(nesting(label, chord), inversion = c(0, 1, 2)) %>% 
   mutate(semitones = map2(inversion, chord, get_normalised_inversion)) %>% 
   arrange(semitones, inversion) %>% 
@@ -143,8 +166,6 @@ chord_labels <- tribble(
   slice(1) %>% 
   select(full_label, starts_with("osc_")) %>% 
   ungroup()
-
-chord_table_name <- "3-note Chords"
 
 chord_row_labels <- chord_tables %>% 
   filter(table_name == chord_table_name) %>% 

@@ -149,10 +149,13 @@ chord_defns$`4-note Chords` <- tribble(
   "dom7sus2", construct_chord_raw("C", c(2, 5, 3))
 )
 
-chord_table_name <- "3-note Chords"
+num_notes <- 3
+# num_notes <- 4
+
+chord_table_name <- paste0(num_notes, "-note Chords")
 
 chord_labels <- chord_defns[[chord_table_name]] %>% 
-  expand(nesting(label, chord), inversion = c(0, 1, 2)) %>% 
+  expand(nesting(label, chord), inversion = 0:(num_notes - 1)) %>% 
   mutate(semitones = map2(inversion, chord, get_normalised_inversion)) %>% 
   arrange(semitones, inversion) %>% 
   mutate(full_label = ifelse(inversion == 0, label, paste(label, "inv", inversion))) %>% 
@@ -161,15 +164,15 @@ chord_labels <- chord_defns[[chord_table_name]] %>%
   mutate(osc = paste0("osc_", row_number())) %>% 
   ungroup() %>% 
   pivot_wider(names_from = osc, values_from = semitones) %>% 
-  group_by(osc_1, osc_2, osc_3) %>% 
-  arrange(osc_1, osc_2, osc_3, inversion) %>% 
+  group_by(across(starts_with("osc_"))) %>% 
+  arrange(across(starts_with("osc_")), inversion) %>%
   slice(1) %>% 
   select(full_label, starts_with("osc_")) %>% 
   ungroup()
 
 chord_row_labels <- chord_tables %>% 
   filter(table_name == chord_table_name) %>% 
-  left_join(chord_labels, by = c("osc_1", "osc_2", "osc_3")) %>% 
+  left_join(chord_labels, by = paste("osc", 1:num_notes, sep = "_")) %>%
   mutate(row_label = ifelse(is.na(full_label), as.character(row), glue("{row} ({full_label})"))) %>% 
   select(row, row_label) %>% 
   mutate(row_label = factor(row_label, ordered = TRUE, levels = unique(row_label)))
@@ -185,7 +188,7 @@ keys_chords %>%
   facet_wrap(vars(row_label), ncol = 8) +
   theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
 
-ggsave("chord-chart-3-notes.pdf", width = 17, height = 10, units = "in")
+ggsave(str_glue("chord-chart-{num_notes}-notes.pdf"), width = 17, height = 10, units = "in")
 
 
 # compact multi-page version for mobile ----------------------------------------------
@@ -211,7 +214,7 @@ all_chord_pages <- 1:num_pages %>%
   marrangeGrob(nrow = 1, ncol = 1,
                top = quote(paste0("E352 ", chord_table_name, ": page ", g, " of ", npages)))
 
-ggsave("chord-chart-3-notes-multipage.pdf", all_chord_pages,
+ggsave(("chord-chart-{num_notes}-notes-multipage.pdf"), all_chord_pages,
        width = 7, height = 9, units = "in")
 
 

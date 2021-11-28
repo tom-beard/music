@@ -137,16 +137,16 @@ chord_defns$`4-note Chords` <- tribble(
   "maj7", construct_chord_major_7("C"),
   "dom7", construct_chord_dominant_7("C"),
   "min7", construct_chord_raw("C", c(3, 4, 3)),
-  "minmaj7", construct_chord_raw("C", c(3, 4, 4)),
-  "halfdim7", construct_chord_raw("C", c(3, 3, 4)),
+  "min maj7", construct_chord_raw("C", c(3, 4, 4)),
+  "half dim7", construct_chord_raw("C", c(3, 3, 4)),
   "dim7", construct_chord_raw("C", c(3, 3, 3)),
   "aug7", construct_chord_raw("C", c(4, 4, 2)),
-  "dom7flat5", construct_chord_raw("C", c(4, 2, 4)),
-  "maj7flat5", construct_chord_raw("C", c(4, 2, 5)),
-  "augmaj7", construct_chord_raw("C", c(4, 4, 3)),
-  "dimmaj7", construct_chord_raw("C", c(3, 3, 5)),
-  "dom7sus4", construct_chord_raw("C", c(5, 2, 3)),
-  "dom7sus2", construct_chord_raw("C", c(2, 5, 3))
+  "dom7 flat5", construct_chord_raw("C", c(4, 2, 4)),
+  "maj7 flat5", construct_chord_raw("C", c(4, 2, 5)),
+  "aug maj7", construct_chord_raw("C", c(4, 4, 3)),
+  "dim maj7", construct_chord_raw("C", c(3, 3, 5)),
+  "dom7 sus4", construct_chord_raw("C", c(5, 2, 3)),
+  "dom7 sus2", construct_chord_raw("C", c(2, 5, 3))
 )
 
 num_notes <- 3
@@ -195,7 +195,7 @@ ggsave(str_glue("chord-chart-{num_notes}-notes.pdf"), width = 17, height = 10, u
 
 rows_per_page <- 4
 cols_per_page <- 2
-num_pages <- length(chord_list) / (rows_per_page * cols_per_page)
+num_pages <- ceiling(length(chord_list) / (rows_per_page * cols_per_page))
 
 plot_chord_page <- function(this_page) {
   keys_chords %>% 
@@ -214,11 +214,11 @@ all_chord_pages <- 1:num_pages %>%
   marrangeGrob(nrow = 1, ncol = 1,
                top = quote(paste0("E352 ", chord_table_name, ": page ", g, " of ", npages)))
 
-ggsave(("chord-chart-{num_notes}-notes-multipage.pdf"), all_chord_pages,
+ggsave(str_glue("chord-chart-{num_notes}-notes-multipage.pdf"), all_chord_pages,
        width = 7, height = 9, units = "in")
 
 
-# look for 9ths -----------------------------------------------------------
+# look for 9ths in 3-note chords -----------------------------------------------------------
 
 chord_list_9ths <- chord_tables %>% 
   filter(osc_2 == 12 + 2 | osc_3 == 12 + 2) %>% 

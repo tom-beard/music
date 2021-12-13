@@ -8,14 +8,19 @@ library(pichor)
 library(ggforce)
 library(gridExtra)
 
-chord_tables <- read_csv(here("chord_tables.csv"), col_types = cols(
-  table_name = col_character(),
-  row = col_integer(),
-  osc_1 = col_double(),
-  osc_2 = col_double(),
-  osc_3 = col_double(),
-  osc_4 = col_double()
-))
+
+# define main functions ---------------------------------------------------
+
+read_chord_tables <- function(chord_file_path) {
+  read_csv(chord_file_path, col_types = cols(
+    table_name = col_character(),
+    row = col_integer(),
+    osc_1 = col_double(),
+    osc_2 = col_double(),
+    osc_3 = col_double(),
+    osc_4 = col_double()
+  ))
+}
 
 make_tidy_chords_from_table <- function(chord_tables, selected_table_name) {
   chord_tables %>% 
@@ -24,18 +29,6 @@ make_tidy_chords_from_table <- function(chord_tables, selected_table_name) {
     select(row, osc, semitones) %>% 
     mutate(osc = str_remove(osc, "^osc_"))
 }
-
-make_tidy_chords_from_table(chord_tables, "4-note Chords") %>% 
-  ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
-  geom_hline(yintercept = c(0, 4, 7, 12), colour = "grey80", size = 1) +
-  geom_step() +
-  geom_point() +
-  scale_x_reverse() +
-  scale_y_continuous(breaks = 0:14) +
-  labs(x = "", y = "", title = "") +
-  coord_flip() +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
 
 make_chord_list_from_table <- function(chord_tables, selected_table_name) {
   chord_tables %>% 
@@ -46,22 +39,23 @@ make_chord_list_from_table <- function(chord_tables, selected_table_name) {
     pull(notes)
 }
 
-chord_list <- make_chord_list_from_table(chord_tables, "3-note Chords")
-chord_list <- make_chord_list_from_table(chord_tables, "4-note Chords")
-
-keys_chords %>% 
-  highlight_key_sequence(key_sequence = chord_list,
-                         new_color = "lightblue", keep_color = "lightblue", remove_color = NULL) %>% 
-  ggpiano() + 
-  coord_fixed(ratio = 0.5) +
-  facet_wrap(vars(seq_name), ncol = 8)
-
-ggsave("chord_test.pdf", width = 10, height = 10, units = "in")
-
-
-# extended keyboard -------------------------------------------------------
-
-chord_list <- make_chord_list_from_table(chord_tables, "Stradella Chords")
+plot_semitone_pattern <- function(chord_tables, selected_table_name) {
+  hlines <- c(0, 4, 7, 12)
+  tidy_chords <- make_tidy_chords_from_table(chord_tables, selected_table_name)
+  max_break <- max(max(hlines), max(tidy_chords$semitones))
+  
+  tidy_chords %>% 
+    ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
+    geom_hline(yintercept = hlines, colour = "grey80", size = 1) +
+    geom_step() +
+    geom_point() +
+    scale_x_reverse() +
+    scale_y_continuous(breaks = 0:max_break) +
+    labs(x = "", y = "", title = selected_table_name) +
+    coord_flip() +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+}
 
 #' Extend keyboard (currently downwards only, by up to an octave)
 #'
@@ -82,6 +76,20 @@ extend_keyboard <- function(lower_keys_required) {
   
   bind_rows(lower_keys, pichor::keys_chords)
 }
+
+
+# initialise --------------------------------------------------------------
+
+chord_tables <- read_chord_tables(here("chord_tables.csv"))
+
+# semitone visalisation ---------------------------------------------------
+
+plot_semitone_pattern(chord_tables, "3-note Chords")
+plot_semitone_pattern(chord_tables, "4-note Chords")
+
+# examine Stradella chords -------------------------------------------------------
+
+chord_list <- make_chord_list_from_table(chord_tables, "Stradella Chords")
 
 lower_keys_required <- 1 - range(chord_list)[1]
 

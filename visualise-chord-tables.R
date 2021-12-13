@@ -23,6 +23,9 @@ read_chord_tables <- function(chord_file_path) {
 }
 
 make_tidy_chords_from_table <- function(chord_tables, selected_table_name) {
+  if (!endsWith(selected_table_name, " Chords")) {
+    selected_table_name <- paste(selected_table_name, "Chords")
+  }
   chord_tables %>% 
     filter(table_name == selected_table_name) %>% 
     pivot_longer(starts_with("osc_"), names_to = "osc", values_to = "semitones", values_drop_na = TRUE) %>% 
@@ -56,7 +59,8 @@ plot_semitone_pattern <- function(chord_tables, selected_table_name) {
     geom_point() +
     scale_x_reverse() +
     scale_y_continuous(breaks = breaks) +
-    labs(x = "", y = "semitones", title = selected_table_name) +
+    labs(x = "", y = "semitones",
+         title = str_glue("{selected_table_name} chords: semitone pattern")) +
     coord_flip() +
     theme_minimal() +
     theme(panel.grid.minor = element_blank())
@@ -82,6 +86,10 @@ extend_keyboard <- function(lower_keys_required) {
   bind_rows(lower_keys, pichor::keys_chords)
 }
 
+get_normalised_inversion <- function(inversion, input_chord) {
+  inverted_chord <- get_keys_inversion(input_chord, inversion)
+  inverted_chord - inverted_chord[1]
+}
 
 # initialise --------------------------------------------------------------
 
@@ -89,14 +97,14 @@ chord_tables <- read_chord_tables(here("chord_tables.csv"))
 
 # semitone visalisation ---------------------------------------------------
 
-plot_semitone_pattern(chord_tables, "3-note Chords")
-plot_semitone_pattern(chord_tables, "4-note Chords")
-plot_semitone_pattern(chord_tables, "Harmonic Chords")
-plot_semitone_pattern(chord_tables, "Stradella Chords")
+plot_semitone_pattern(chord_tables, "3-note")
+plot_semitone_pattern(chord_tables, "4-note")
+plot_semitone_pattern(chord_tables, "Harmonic")
+plot_semitone_pattern(chord_tables, "Stradella")
 
 # examine Stradella chords -------------------------------------------------------
 
-chord_list <- make_chord_list_from_table(chord_tables, "Stradella Chords")
+chord_list <- make_chord_list_from_table(chord_tables, "Stradella")
 
 lower_keys_required <- 1 - range(chord_list)[1]
 
@@ -107,39 +115,22 @@ extend_keyboard(lower_keys_required) %>%
   coord_fixed(ratio = 0.5) +
   facet_wrap(vars(seq_name), ncol = 8)
 
-
 # examine harmonic chords -------------------------------------------------
 
 bind_rows(
-  make_tidy_chords_from_table(chord_tables, "4-note Chords") %>% add_column(table_type = "ET"),
-  make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>% add_column(table_type = "Harmonic")
+  make_tidy_chords_from_table(chord_tables, "4-note") %>% add_column(table_type = "ET"),
+  make_tidy_chords_from_table(chord_tables, "Harmonic") %>% add_column(table_type = "Harmonic")
 ) %>% 
   pivot_wider(names_from = table_type, values_from = semitones)
 
-# 
+# Harmonic chords aren't arranged like the Equal Tempered ones
   
-make_tidy_chords_from_table(chord_tables, "Harmonic Chords") %>% 
-  ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
-  geom_step() +
-  geom_point() +
-  scale_x_reverse() +
-  scale_y_continuous(breaks = 12 * (0:5)) +
-  labs(x = "", y = "", title = "") +
-  coord_flip() +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
-
-
 # find labels for common chords -------------------------------------------
-
-get_normalised_inversion <- function(inversion, input_chord) {
-  inverted_chord <- get_keys_inversion(input_chord, inversion)
-  inverted_chord - inverted_chord[1]
-}
 
 chord_defns <- list()
 
-chord_defns$`3-note Chords` <- tribble(
+# chord_defns$`3-note Chords` <- tribble(
+chord_defns$`3-note` <- tribble(
   ~label, ~chord,
   "maj", construct_chord_major("C"),
   "min", construct_chord_minor("C"),
@@ -149,7 +140,8 @@ chord_defns$`3-note Chords` <- tribble(
   "sus4", construct_chord_raw("C", c(5, 2))
 )
 
-chord_defns$`4-note Chords` <- tribble(
+# chord_defns$`4-note Chords` <- tribble(
+chord_defns$`4-note` <- tribble(
   ~label, ~chord,
   "maj7", construct_chord_major_7("C"),
   "dom7", construct_chord_dominant_7("C"),
@@ -166,10 +158,15 @@ chord_defns$`4-note Chords` <- tribble(
   "dom7 sus2", construct_chord_raw("C", c(2, 5, 3))
 )
 
-num_notes <- 3
-# num_notes <- 4
+# to do: extract into functions; generalise to Stradella chords
 
-chord_table_name <- paste0(num_notes, "-note Chords")
+chord_table_name <- "3-note"
+chord_table_name <- "4-note"
+
+num_notes <- make_tidy_chords_from_table(chord_tables, chord_table_name) %>% 
+  pull(osc) %>% 
+  as.integer() %>% 
+  max()
 
 chord_labels <- chord_defns[[chord_table_name]] %>% 
   expand(nesting(label, chord), inversion = 0:(num_notes - 1)) %>% 
@@ -188,7 +185,7 @@ chord_labels <- chord_defns[[chord_table_name]] %>%
   ungroup()
 
 chord_row_labels <- chord_tables %>% 
-  filter(table_name == chord_table_name) %>% 
+  filter(table_name == paste(chord_table_name, "Chords")) %>% 
   left_join(chord_labels, by = paste("osc", 1:num_notes, sep = "_")) %>%
   mutate(row_label = ifelse(is.na(full_label), as.character(row), glue("{row} ({full_label})"))) %>% 
   select(row, row_label) %>% 
@@ -205,7 +202,7 @@ keys_chords %>%
   facet_wrap(vars(row_label), ncol = 8) +
   theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
 
-ggsave(str_glue("chord-chart-{num_notes}-notes.pdf"), width = 17, height = 10, units = "in")
+ggsave(str_glue("chord-chart-{chord_table_name}-chords.pdf"), width = 17, height = 10, units = "in")
 
 
 # compact multi-page version for mobile ----------------------------------------------
@@ -229,9 +226,9 @@ plot_chord_page <- function(this_page) {
 all_chord_pages <- 1:num_pages %>% 
   map(plot_chord_page) %>% 
   marrangeGrob(nrow = 1, ncol = 1,
-               top = quote(paste0("E352 ", chord_table_name, ": page ", g, " of ", npages)))
+               top = quote(paste0("E352 ", chord_table_name, " chords: page ", g, " of ", npages)))
 
-ggsave(str_glue("chord-chart-{num_notes}-notes-multipage.pdf"), all_chord_pages,
+ggsave(str_glue("chord-chart-{chord_table_name}-chords-multipage.pdf"), all_chord_pages,
        width = 7, height = 9, units = "in")
 
 
@@ -239,7 +236,7 @@ ggsave(str_glue("chord-chart-{num_notes}-notes-multipage.pdf"), all_chord_pages,
 
 chord_list_9ths <- chord_tables %>% 
   filter(osc_2 == 12 + 2 | osc_3 == 12 + 2) %>% 
-  make_chord_list_from_table("3-note Chords")
+  make_chord_list_from_table("3-note")
 
 keys_chords %>% 
   highlight_key_sequence(key_sequence = chord_list_9ths,
@@ -250,4 +247,6 @@ keys_chords %>%
   facet_wrap(vars(seq_no)) +
   # facet_wrap(vars(row_label), ncol = 8) +
   theme(strip.text = element_text(margin = margin(b = 1, t = 0)))
+
+# note: this seq_no doesn't match the E352 chord numbers
 

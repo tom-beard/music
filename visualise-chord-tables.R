@@ -42,14 +42,13 @@ make_chord_list_from_table <- function(chord_tables, selected_table_name) {
 plot_semitone_pattern <- function(chord_tables, selected_table_name) {
   hlines <- c(0, 4, 7, 12) # maj 3rd, 5th, octave
   tidy_chords <- make_tidy_chords_from_table(chord_tables, selected_table_name)
-  max_semitones <- max(tidy_chords$semitones)
+  semitone_range <- range(tidy_chords$semitones)
   # breaks should be more generalised than this
-  if (max_semitones > 24) {
+  if (semitone_range[2] > 24) {
     breaks <- 12 * (0:5)
   } else {
-      breaks <- 0:max(max(hlines), max_semitones)
-    }
-  print(breaks)
+    breaks <- semitone_range[1]:max(max(hlines), semitone_range[2])
+  }
   tidy_chords %>% 
     ggplot(aes(x = row, y = semitones, colour = osc, group = osc)) +
     geom_hline(yintercept = hlines, colour = "grey80", size = 1) +
@@ -93,6 +92,7 @@ chord_tables <- read_chord_tables(here("chord_tables.csv"))
 plot_semitone_pattern(chord_tables, "3-note Chords")
 plot_semitone_pattern(chord_tables, "4-note Chords")
 plot_semitone_pattern(chord_tables, "Harmonic Chords")
+plot_semitone_pattern(chord_tables, "Stradella Chords")
 
 # examine Stradella chords -------------------------------------------------------
 
